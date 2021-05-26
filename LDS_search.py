@@ -42,7 +42,7 @@ class LDS:
                 self.best_config = self.current_config.copy()
                 self.knapsack.arrange_by_config(self.best_config)
                 print(self.best_config)
-                print(self.knapsack.)
+                print(self.knapsack.value)
             return
 
         if num_of_errors == 0:
