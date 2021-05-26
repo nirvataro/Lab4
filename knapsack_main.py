@@ -1,9 +1,12 @@
 from sys import argv
 from Knapsack import Knapsack
+from LDS_search import LDS
 
 
 def main_knapsack(file):
     ks = Knapsack(file)
+    lds = LDS(ks)
+    lds.search()
 
 
 if __name__ == '__main__':

@@ -7,12 +7,14 @@ class Knapsack:
         self.n = None   # number of sacks
         self.sacks = []
         self.items = []
-        self.value = None
+        self.items_used = []
+        self.value = 0
         self.opt = None
         self.from_file = False
         if input_file:
             self.from_file = True
             self.extract(input_file)
+        self.branch_and_bound_value = self.branch_and_bound()
 
     def extract(self, file):
         text = open(file, 'r+')
@@ -33,7 +35,30 @@ class Knapsack:
         item_weights = np.array(item_weights).T.tolist()
         self.opt = int(text[start_index + self.m*self.n])
         self.sacks = [Sack(sack_capacities[i], i) for i in range(self.n)]
-        self.items = [Item(item_values[i], item_weights[i], i) for i in range(self.m)]
+        self.items = [Item(i, item_values[i], item_weights[i]) for i in range(self.m)]
+
+    def branch_and_bound(self):
+        return sum([item.value for item in self.items])
+
+    def arrange_by_config(self, config):
+        self.clear_sacks()
+        for i in range(len(config)):
+            if config[i] == 1:
+                self.add_item_to_sacks(i)
+                self.value += self.items[i].value
+        print(self.value)
+
+    def add_item_to_sacks(self, item_index):
+        self.items_used.append(item_index)
+        for sack in self.sacks:
+            sack.add_item(self.items[item_index])
+
+    def clear_sacks(self):
+        for item in self.items_used:
+            for sack in self.sacks:
+                sack.remove_item(item)
+        self.items_used = []
+        self.value = 0
 
 
 class Sack:
@@ -41,16 +66,24 @@ class Sack:
         self.number = number
         self.capacity = capacity
         self.items = []
-        self.value = None
+        self.value = 0
 
     def add_item(self, item):
         self.items.append(item.copy())
         self.value += item.value
-        self.capacity -= item.weights(self.number)
+        self.capacity -= item.weights[self.number]
+
+    def remove_item(self, item):
+        self.value -= item.value
+        self.capacity += item.weights(self.number)
+        self.items = filter(lambda x: x.number != item.number, self.items)
 
 
 class Item:
-    def __init__(self, value, weights, number):
+    def __init__(self, number, value, weights):
         self.number = number
         self.value = value
         self.weights = weights.copy()
+
+    def copy(self):
+        return Item(self.number, self.value, self.weights.copy())
