@@ -36,6 +36,35 @@ class Knapsack:
         self.sacks = [Sack(sack_capacities[i], i) for i in range(self.n)]
         self.items = [Item(i, item_values[i], item_weights[i]) for i in range(self.m)]
 
+    def neglecting_integrality_constraints(self, start_item):
+        normalized_values = [[None for _ in range(len(self.items))] for _ in range(len(self.sacks))]
+        for i, item in enumerate(self.items):
+            for j, sack in enumerate(self.sacks):
+                if item.weights[j]:
+                    normalized_values[j][i] = item.value/item.weights[j]
+                else:
+                    normalized_values[j][i] = np.inf
+        best_overall = 0
+        for sack_number, item_value in enumerate(normalized_values):
+            sack_capacity = self.sacks[sack_number].capacity
+            current_value = 0
+            while sack_capacity and not all(x == -1 for x in item_value):
+                item = np.argmax(item_value)
+                weight = self.items[item].weights[sack_number]
+                if sack_capacity > weight:
+                    sack_capacity -= weight
+                    current_value += self.items[item].value
+                    item_value[item] = -1
+                else:
+                    fraction = sack_capacity / weight
+                    current_value += (self.items[item].value * fraction)
+                    sack_capacity -= (weight * fraction)
+                    break
+            if current_value > best_overall:
+                best_overall = current_value
+        print(best_overall)
+        return best_overall
+
     def arrange_by_config(self, config):
         self.clear_sacks()
         for i in range(len(config)):
@@ -47,6 +76,13 @@ class Knapsack:
         self.items_used.append(item_index)
         for sack in self.sacks:
             sack.add_item(self.items[item_index])
+        self.value += self.items[item_index].value
+
+    def remove_item_from_sacks(self, item_index):
+        self.items_used.remove(item_index)
+        for sack in self.sacks:
+            sack.remove_item(self.items[item_index])
+        self.value -= self.items[item_index].value
 
     def clear_sacks(self):
         for item in self.items_used:
@@ -54,6 +90,12 @@ class Knapsack:
                 sack.remove_item(item)
         self.items_used = []
         self.value = 0
+
+    def is_legal(self):
+        for sack in self.sacks:
+            if sack.room < 0:
+                return False
+        return True
 
 
 class Sack:
