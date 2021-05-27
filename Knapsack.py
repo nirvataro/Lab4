@@ -14,7 +14,6 @@ class Knapsack:
         if input_file:
             self.from_file = True
             self.extract(input_file)
-        self.branch_and_bound_value = self.branch_and_bound()
 
     def extract(self, file):
         text = open(file, 'r+')
@@ -37,16 +36,12 @@ class Knapsack:
         self.sacks = [Sack(sack_capacities[i], i) for i in range(self.n)]
         self.items = [Item(i, item_values[i], item_weights[i]) for i in range(self.m)]
 
-    def branch_and_bound(self):
-        return sum([item.value for item in self.items])
-
     def arrange_by_config(self, config):
         self.clear_sacks()
         for i in range(len(config)):
             if config[i] == 1:
                 self.add_item_to_sacks(i)
                 self.value += self.items[i].value
-        print(self.value)
 
     def add_item_to_sacks(self, item_index):
         self.items_used.append(item_index)
@@ -65,18 +60,21 @@ class Sack:
     def __init__(self, capacity, number):
         self.number = number
         self.capacity = capacity
+        self.room = capacity
         self.items = []
         self.value = 0
 
     def add_item(self, item):
         self.items.append(item.copy())
         self.value += item.value
-        self.capacity -= item.weights[self.number]
+        self.room -= item.weights[self.number]
 
-    def remove_item(self, item):
-        self.value -= item.value
-        self.capacity += item.weights(self.number)
-        self.items = filter(lambda x: x.number != item.number, self.items)
+    def remove_item(self, item_number):
+        for item in self.items:
+            if item.number == item_number:
+                self.value -= item.value
+                self.room += item.weights[self.number]
+        self.items = list(filter(lambda x: x.number != item.number, self.items))
 
 
 class Item:
