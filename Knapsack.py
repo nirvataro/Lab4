@@ -36,7 +36,8 @@ class Knapsack:
         self.sacks = [Sack(sack_capacities[i], i) for i in range(self.n)]
         self.items = [Item(i, item_values[i], item_weights[i]) for i in range(self.m)]
 
-    def neglecting_integrality_constraints(self, start_item):
+    def neglecting_integrality_constraints(self):
+        # calculating object weight per value
         normalized_values = [[None for _ in range(len(self.items))] for _ in range(len(self.sacks))]
         for i, item in enumerate(self.items):
             for j, sack in enumerate(self.sacks):
@@ -44,26 +45,32 @@ class Knapsack:
                     normalized_values[j][i] = item.value/item.weights[j]
                 else:
                     normalized_values[j][i] = np.inf
+        # best I can achieve now
         best_overall = 0
+        # check for each sack what is the best I can do with non-integers
+        partial_item = None
         for sack_number, item_value in enumerate(normalized_values):
-            sack_capacity = self.sacks[sack_number].capacity
+            sack = self.sacks[sack_number]
+            # mark items that are already in sack
+            for used in self.items_used:
+                item_value[used] = -1
             current_value = 0
-            while sack_capacity and not all(x == -1 for x in item_value):
+            while sack.room and not all(x == -1 for x in item_value):
                 item = np.argmax(item_value)
-                weight = self.items[item].weights[sack_number]
-                if sack_capacity > weight:
-                    sack_capacity -= weight
-                    current_value += self.items[item].value
-                    item_value[item] = -1
-                else:
-                    fraction = sack_capacity / weight
-                    current_value += (self.items[item].value * fraction)
-                    sack_capacity -= (weight * fraction)
+                self.add_item_to_sacks(item)
+                if not self.is_legal():
+                    self.remove_item_from_sacks(item)
+                    fraction = 1
+                    for sack in self.sacks:
+                        if fraction > sack.room/self.items[item].weighs[sack.number]:
+                            fraction = sack.room / self.items[item].weighs[sack.number]
+                    current_value += fraction * self.items[item].value
                     break
+                current_value += self.items[item].value
             if current_value > best_overall:
                 best_overall = current_value
-        print(best_overall)
-        return best_overall
+                partial_item = item
+        return best_overall, partial_item
 
     def arrange_by_config(self, config):
         self.clear_sacks()
