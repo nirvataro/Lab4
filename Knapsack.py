@@ -48,8 +48,8 @@ class Knapsack:
         # best I can achieve now
         best_overall = 0
         # check for each sack what is the best I can do with non-integers
-        partial_item = None
         for sack_number, item_value in enumerate(normalized_values):
+            partial_item = None
             sack = self.sacks[sack_number]
             # mark items that are already in sack
             for used in self.items_used:
