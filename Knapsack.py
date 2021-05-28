@@ -63,8 +63,9 @@ class Knapsack:
                     self.remove_item_from_sacks(item)
                     fraction = 1
                     for sack in self.sacks:
-                        if fraction > sack.room/self.items[item].weights[sack.number]:
-                            fraction = sack.room / self.items[item].weights[sack.number]
+                        if self.items[item].weights[sack.number]:
+                            if fraction > sack.room/self.items[item].weights[sack.number]:
+                                fraction = sack.room / self.items[item].weights[sack.number]
                     current_value += fraction * self.items[item].value
                 else:
                     current_value += self.items[item].value
