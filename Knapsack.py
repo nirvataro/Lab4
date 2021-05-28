@@ -57,16 +57,17 @@ class Knapsack:
             current_value = 0
             while sack.room and not all(x == -1 for x in item_value):
                 item = np.argmax(item_value)
+                item_value[item] = -1
                 self.add_item_to_sacks(item)
                 if not self.is_legal():
                     self.remove_item_from_sacks(item)
                     fraction = 1
                     for sack in self.sacks:
-                        if fraction > sack.room/self.items[item].weighs[sack.number]:
-                            fraction = sack.room / self.items[item].weighs[sack.number]
+                        if fraction > sack.room/self.items[item].weights[sack.number]:
+                            fraction = sack.room / self.items[item].weights[sack.number]
                     current_value += fraction * self.items[item].value
-                    break
-                current_value += self.items[item].value
+                else:
+                    current_value += self.items[item].value
             if current_value > best_overall:
                 best_overall = current_value
                 partial_item = item
@@ -88,13 +89,13 @@ class Knapsack:
     def remove_item_from_sacks(self, item_index):
         self.items_used.remove(item_index)
         for sack in self.sacks:
-            sack.remove_item(self.items[item_index])
+            sack.remove_item(self.items[item_index].number)
         self.value -= self.items[item_index].value
 
     def clear_sacks(self):
         for item in self.items_used:
             for sack in self.sacks:
-                sack.remove_item(item)
+                sack.remove_item(item.number)
         self.items_used = []
         self.value = 0
 

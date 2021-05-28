@@ -6,6 +6,7 @@ class LDS:
         self.knapsack = knapsack_problem
         self.best_found = 0
         self.best_used = None
+        self.best_unused = None
         self.current_config = [1 for _ in range(self.knapsack.m)]
         self.errors = 0
 
