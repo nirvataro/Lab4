@@ -7,8 +7,8 @@ def main_knapsack(file):
     ks = Knapsack(file)
     lds = LDS(ks)
     lds.search()
-    print(ks.opt)
-    print(ks.value)
+    print(ks)
+
 
 
 if __name__ == '__main__':

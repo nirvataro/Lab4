@@ -36,7 +36,7 @@ class Knapsack:
         self.sacks = [Sack(sack_capacities[i], i) for i in range(self.n)]
         self.items = [Item(i, item_values[i], item_weights[i]) for i in range(self.m)]
 
-    def neglecting_integrality_constraints(self):
+    def neglecting_integrality_constraints(self, dont_use):
         # calculating object weight per value
         normalized_values = [[None for _ in range(len(self.items))] for _ in range(len(self.sacks))]
         for i, item in enumerate(self.items):
@@ -48,13 +48,15 @@ class Knapsack:
         # best I can achieve now
         best_overall = 0
         # check for each sack what is the best I can do with non-integers
+        partial_item = None
         for sack_number, item_value in enumerate(normalized_values):
-            partial_item = None
             sack = self.sacks[sack_number]
             # mark items that are already in sack
             for used in self.items_used:
                 item_value[used] = -1
-            current_value = 0
+            for used in dont_use:
+                item_value[used] = -1
+            current_value = self.value
             while sack.room and not all(x == -1 for x in item_value):
                 item = np.argmax(item_value)
                 item_value[item] = -1
@@ -67,11 +69,13 @@ class Knapsack:
                             if fraction > sack.room/self.items[item].weights[sack.number]:
                                 fraction = sack.room / self.items[item].weights[sack.number]
                     current_value += fraction * self.items[item].value
-                else:
-                    current_value += self.items[item].value
+                    break
+                current_value += self.items[item].value
             if current_value > best_overall:
                 best_overall = current_value
                 partial_item = item
+                if sack.room == 0:
+                    partial_item = None
         return best_overall, partial_item
 
     def arrange_by_config(self, config):
@@ -96,7 +100,7 @@ class Knapsack:
     def clear_sacks(self):
         for item in self.items_used:
             for sack in self.sacks:
-                sack.remove_item(item.number)
+                sack.remove_item(item)
         self.items_used = []
         self.value = 0
 
@@ -105,6 +109,13 @@ class Knapsack:
             if sack.room < 0:
                 return False
         return True
+
+    def __str__(self):
+        string = "Knapsack:\nItems Taken: " + str(self.items_used) + "\nValue: " + str(self.value) + "\nOpt: " + str(self.opt)
+        string += "\nRoom left in each sack: \n"
+        for sack in self.sacks:
+            string += "Sack {}: {}\n".format(sack.number, sack.room)
+        return string
 
 
 class Sack:
@@ -125,7 +136,7 @@ class Sack:
             if item.number == item_number:
                 self.value -= item.value
                 self.room += item.weights[self.number]
-        self.items = list(filter(lambda x: x.number != item.number, self.items))
+        self.items = list(filter(lambda x: x.number != item_number, self.items))
 
 
 class Item:
