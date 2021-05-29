@@ -10,7 +10,6 @@ def main_knapsack(file):
     print(ks)
 
 
-
 if __name__ == '__main__':
     input_file = argv[1]
     main_knapsack(input_file)
