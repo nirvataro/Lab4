@@ -1,6 +1,7 @@
 import numpy as np
 import time
 
+
 class LDS:
     def __init__(self, knapsack_problem):
         self.knapsack = knapsack_problem

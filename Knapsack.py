@@ -78,13 +78,6 @@ class Knapsack:
                     partial_item = None
         return best_overall, partial_item
 
-    def arrange_by_config(self, config):
-        self.clear_sacks()
-        for i in range(len(config)):
-            if config[i] == 1:
-                self.add_item_to_sacks(i)
-                self.value += self.items[i].value
-
     def add_item_to_sacks(self, item_index):
         self.items_used.append(item_index)
         for sack in self.sacks:
@@ -114,7 +107,7 @@ class Knapsack:
         string = "Knapsack:\nItems Taken: " + str(self.items_used) + "\nValue: " + str(self.value) + "\nOpt: " + str(self.opt)
         string += "\nRoom left in each sack: \n"
         for sack in self.sacks:
-            string += "Sack {}: {}\n".format(sack.number, sack.room)
+            string += str(sack)
         return string
 
 
@@ -137,6 +130,9 @@ class Sack:
                 self.value -= item.value
                 self.room += item.weights[self.number]
         self.items = list(filter(lambda x: x.number != item_number, self.items))
+
+    def __str__(self):
+        return "Sack {}: {}\n".format(self.number, self.room)
 
 
 class Item:
