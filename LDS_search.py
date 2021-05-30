@@ -26,6 +26,8 @@ class LDS:
     def fractional_search(self, wave, end_time, dont_use=None):
         if time.time() >= end_time:
             return
+        if self.knapsack.adjustable:
+            self.knapsack.values_function()
         if dont_use is None:
             dont_use = []
         # find estimate on given configuration and unknown end
@@ -35,6 +37,7 @@ class LDS:
         if self.knapsack.value > self.best_found:
             self.best_found = self.knapsack.value
             self.best_items_used = self.knapsack.items_used.copy()
+            print(self.knapsack)
         if partial_item is None:
             return
 

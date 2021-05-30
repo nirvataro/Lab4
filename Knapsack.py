@@ -2,7 +2,7 @@ import numpy as np
 
 
 class Knapsack:
-    def __init__(self, input_file=None):
+    def __init__(self, input_file=None, adjustable_values=None):
         self.m = None   # number of items
         self.n = None   # number of sacks
         self.sacks = []
@@ -14,6 +14,15 @@ class Knapsack:
         if input_file:
             self.from_file = True
             self.extract(input_file)
+        if hasattr(adjustable_values, '__call__'):
+            self.adjustable = True
+            self.values_function = adjustable_values
+
+    def init_not_from_file(self, sack_number, sack_capacities, items):
+        self.m = len(items)
+        self.n = sack_number
+        self.items = items
+        self.sacks = [Sack(sack_capacities[i], i) for i in range(sack_number)]
 
     def extract(self, file):
         text = open(file, 'r+')
