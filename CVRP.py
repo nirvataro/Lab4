@@ -130,8 +130,8 @@ class TwoStepSolution(CVRP):
         self.city_clusters = sa_clusters.saBest.copy()
 
     def legal(self, clusters):
-        room = self.capacity
         for cluster in clusters:
+            room = self.capacity
             for c in cluster:
                 room -= self.goods[c-1]
             if room < 0:

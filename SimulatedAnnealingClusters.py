@@ -68,4 +68,4 @@ class SimulatedAnnealing:
                 sack_center = np.asarray([x / len(cluster), y / len(cluster)])
                 for city in cluster:
                     value += distance.euclidean(sack_center, self.cvrp.city_cords[city-1])
-        return value
+        return value*len(clusters)
