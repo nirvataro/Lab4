@@ -1,12 +1,15 @@
 from sys import argv
-from CVRP import TwoStepSolution
+from Knapsack import Knapsack
+from LDS_search import LDS
 
 
-def main_cvrp(file):
-    tss = TwoStepSolution(file)
-    tss.initial_clustering()
+def main_knapsack(file):
+    ks = Knapsack(file)
+    lds = LDS(ks)
+    lds.search(0, 30)
+    print(ks)
 
 
 if __name__ == '__main__':
     input_file = argv[1]
-    main_cvrp(input_file)
+    main_knapsack(input_file)

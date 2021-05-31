@@ -1,15 +1,14 @@
 from sys import argv
-from Knapsack import Knapsack
-from LDS_search import LDS
+from CVRP import TwoStepSolution
 
 
-def main_knapsack(file):
-    ks = Knapsack(file)
-    lds = LDS(ks)
-    lds.search(0, 30)
-    print(ks)
+def main_cvrp(file):
+    tss = TwoStepSolution(file)
+    tss.search(120)
+    print(tss.cost)
+    tss.draw()
 
 
 if __name__ == '__main__':
     input_file = argv[1]
-    main_knapsack(input_file)
+    main_cvrp(input_file)

@@ -2,6 +2,13 @@ from Knapsack import Knapsack, Item
 import LDS_search
 import numpy as np
 from scipy.spatial import distance
+from copy import deepcopy
+from SimulatedAnnealingCVRP import SimulatedAnnealing as SA_cvrp
+from SimulatedAnnealingClusters import SimulatedAnnealing as SA_clusters
+import time
+import random
+import networkx as nx
+import matplotlib.pyplot as plt
 
 
 class CVRP:
@@ -51,12 +58,41 @@ class CVRP:
     def add_truck(self):
         self.trucks.append(Truck(self.capacity))
 
+    def add_route_to_truck(self, truck, route):
+        truck.road = route
+        current_city = 1
+        truck.cost = 0
+        route_copy = route.copy()
+        while route_copy:
+            truck.cost += self.dist_matrix[current_city-1][route_copy[0]-1]
+            truck.room -= self.goods[current_city-1]
+            current_city = route_copy.pop(0)
+        truck.cost += self.dist_matrix[current_city-1][0]
+        self.cost += truck.cost
+
+    def draw(self):
+        node_color = "#" + ''.join([random.choice('0123456789ABCDEF') for _ in range(6)])
+        plt.plot(self.city_cords[0][0], self.city_cords[0][1], node_color,linewidth=5)
+        plt.text(self.city_cords[0][0], self.city_cords[0][1], "1")
+        for truck in self.trucks:
+            node_color = "#" + ''.join([random.choice('0123456789ABCDEF') for _ in range(6)])
+            last_city = (self.city_cords[0][0], self.city_cords[0][1])
+            for city in truck.road:
+                plt.plot(self.city_cords[city-1][0], self.city_cords[city-1][1], node_color,linewidth=5)
+                plt.text(self.city_cords[city-1][0], self.city_cords[city-1][1], str(city))
+                plt.plot([self.city_cords[city-1][0], last_city[0]], [self.city_cords[city-1][1], last_city[1]], node_color)
+                last_city = (self.city_cords[city-1][0], self.city_cords[city-1][1])
+            plt.plot([self.city_cords[0][0], last_city[0]], [self.city_cords[0][1], last_city[1]],
+                     node_color)
+
+        plt.show()
+
 
 class Truck:
     def __init__(self, capacity):
         self.room = capacity
         self.road = []
-        self.center_cord = None
+        self.cost = 0
 
 
 class TwoStepSolution(CVRP):
@@ -66,24 +102,53 @@ class TwoStepSolution(CVRP):
         self.sack_center = None
         self.ks = Knapsack(adjustable_values=self.adjust_values)
 
-    def initial_clustering(self):
+    def search(self, time=120):
+        print("Clustering")
+        self.clustering(time/2)
+        print("Finding Paths")
+        self.TSP(time/2)
+
+    def clustering(self, time):
+        max_trucks = 1 + sum(self.goods)/self.capacity
+        time_for_sack = 0.5 * time / max_trucks
         while self.unvisited_cities:
-            items =[]
+            items = []
             for index, city_number in enumerate(self.unvisited_cities):
                 items.append(Item(index, 0.0001, [self.goods[city_number]]))
             self.ks.init_not_from_file(1, [self.capacity], items)
             self.ks.clear_sacks()
             lds = LDS_search.LDS(self.ks)
-            lds.search(0, 5)
+            lds.search(0, time_for_sack)
             cluster = [self.unvisited_cities[item] for item in self.ks.items_used]
             self.city_clusters.append([self.unvisited_cities[item]+1 for item in self.ks.items_used])
-            print("cluster: ", cluster)
             self.unvisited_cities = [item for item in self.unvisited_cities if item not in cluster]
-        print(self.city_clusters)
+        self.improve_clustering(0.5 * time)
 
+    def improve_clustering(self, timer):
+        sa_clusters = SA_clusters(self)
+        sa_clusters.sa_search(timer, True)
+        self.city_clusters = sa_clusters.saBest.copy()
 
-    def TSP_stage(self):
-        return
+    def legal(self, clusters):
+        room = self.capacity
+        for cluster in clusters:
+            for c in cluster:
+                room -= self.goods[c-1]
+            if room < 0:
+                return False
+        return True
+
+    def TSP(self, time):
+        large_clusters = sum([1 for cluster in self.city_clusters if len(cluster) > 1])
+        for cluster in self.city_clusters:
+            self.trucks.append(Truck(self.capacity))
+            road = np.array(self.find_TSP(cluster, time/large_clusters) if len(cluster) > 1 else cluster)
+            self.add_route_to_truck(self.trucks[-1], road.tolist())
+
+    def find_TSP(self, cities, timer):
+        sa = SA_cvrp(self, cities)
+        sa.sa_search(timer, True)
+        return sa.saBest
 
     def adjust_values(self):
         if not self.ks.items_used:
@@ -96,6 +161,4 @@ class TwoStepSolution(CVRP):
         for item in self.ks.items:
             if item.number not in self.ks.items_used:
                 distance = np.linalg.norm(self.sack_center-self.city_cords[item.number])
-                if distance == 0:
-                    print(self.sack_center)
-                item.value = 1 / distance
+                item.value = 1 / (distance + 0.0001)
