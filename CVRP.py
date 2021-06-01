@@ -87,6 +87,22 @@ class CVRP:
 
         plt.show()
 
+    def generate_clusters(self):
+        clusters = []
+        unused_cities = self.unvisited_cities.copy()
+        while unused_cities:
+            cluster = []
+            cluster_room = self.capacity
+            while cluster_room:
+                city = random.choice(unused_cities)
+                if self.goods[city-1] > cluster_room:
+                    break
+                unused_cities.remove(city)
+                cluster.append(city)
+                cluster_room -= self.goods[city-1]
+            clusters.append(cluster)
+        return clusters
+
 
 class Truck:
     def __init__(self, capacity):
