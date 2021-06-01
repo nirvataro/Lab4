@@ -13,12 +13,14 @@ GA_MUTATIONRATE = .25      # mutation rate
 
 
 class Gen:
-    def __init__(self, city_clusters, distance_matrix, city_cords):
+    def __init__(self, city_clusters, distance_matrix, city_cords, age=0):
         self.city_clusters = city_clusters
         self.cluster_val, self.distance_val = self.calc_val(distance_matrix, city_cords)
         self.dominating = []
         self.domination_count = 0
         self.front = None
+        self.crowd_distance = 0
+        self.age = age
 
     def calc_val(self, distance_matrix, city_cords):
         distance_sum = 0
@@ -38,20 +40,16 @@ class Gen:
 
 
 class GeneticAlgorithm:
-    def __init__(self, cvrp, popsize=GA_POPSIZE, elite_rate=GA_ELITRATE, mutation_rate=GA_MUTATIONRATE):
+    def __init__(self, cvrp, popsize=GA_POPSIZE, mutation_rate=GA_MUTATIONRATE):
         # uncolored graph of the graph we are trying to color
         self.cvrp = cvrp
         # size of population
         self.pop_size = popsize
-        # number of gens that continue to next generation
-        self.elite_size = round(elite_rate*popsize)
         # the chance of mutation in gen
         self.mutation_rate = mutation_rate
         # arrays of current and next generation
         self.gen_arr = self.init_population()
         self.fronts = []
-        # ages of gens
-        self.ages = [random.randint(0, 4) for _ in range(self.pop_size)]
         # best fitness
         self.best_fitness = 0
         # iteration count
@@ -67,7 +65,7 @@ class GeneticAlgorithm:
 
     # initializes population
     def init_population(self):
-        gen_arr = [Gen(self.cvrp.generate_clusters(), self.cvrp.dist_matrix, self.cvrp.city_cords) for _ in range(self.pop_size)]
+        gen_arr = [Gen(self.cvrp.generate_clusters(), self.cvrp.dist_matrix, self.cvrp.city_cords, random.randint(0, 4)) for _ in range(self.pop_size)]
         return gen_arr
 
     # sorts population by key fitness value
@@ -79,7 +77,7 @@ class GeneticAlgorithm:
         print("Total time of generation: {}".format(iter_time))
         print("Total clock ticks (CPU)) of generation: {}\n".format(iter_time * cpu_freq()[0] * (2 ** 20)))
 
-    def calculate_front(self):
+    def calculate_fronts(self):
         for i, gen1 in enumerate(self.gen_arr):
             for gen2 in self.gen_arr[i+1:]:
                 if gen1.cluster_val <= gen2.cluster_val and gen1.distance_val <= gen2.distance_val:
@@ -108,13 +106,27 @@ class GeneticAlgorithm:
 
     def crowding_distance_sort(self):
         for front in self.fronts:
+            front.sort(key=lambda x: x.distance_val, reverse=True)
+            front[0].crowd_distance = np.inf
+            front[-1].crowd_distance = np.inf
+            for i, gen in enumerate(front[1:-1], start=1):
+                gen.crowd_distance += (front[i+1].distance_val-front[i-1].distance_val)/\
+                                      (front[0].distance_val-front[-1].distance_val)
+            front.sort(key=lambda x: x.cluster_val, reverse=True)
+            front[0].crowd_distance = np.inf
+            front[-1].crowd_distance = np.inf
+            for i, gen in enumerate(front[1:-1], start=1):
+                gen.crowd_distance += (front[i+1].cluster_val-front[i-1].cluster_val)/\
+                                      (front[0].cluster_val-front[-1].cluster_val)
 
-
-
-    # takes GA_ELITRATE percent to next generation
     def elitism(self):
-        for i in range(self.elite_size):
-            self.buffer[i] = self.gen_arr[i].__deepcopy__()
+        self.gen_arr.clear()
+        while self.pop_size - len(self.gen_arr):
+            front = self.fronts.pop(0)
+            pop_size_left = self.pop_size - len(self.gen_arr)
+            end = len(front) if pop_size_left >= len(front) else pop_size_left
+            for gen in front[:end]:
+                self.gen_arr.append(gen)
 
     # crossover method - if one of the parents is legal pass their color to child
     # otherwise, randomly choose a color between them
@@ -140,25 +152,20 @@ class GeneticAlgorithm:
                 return True
         return False
 
-    # RWS selection
-    def selection(self, can_mate):
-        # sel will store selected parents to mate
-        total_fitness = sum([gen.fitness for gen in can_mate])
+    def get_parent(self, can_mate):
+        g1, g2 = random.sample(can_mate, 2)
+        if g1.front > g2.front:
+            return g1
+        if g2.front > g1.front:
+            return g2
+        if g1.crowd_distance > g2.crowd_distance
+            return g1
+        return g2
 
-        # randomize a number between 0-sum of all fitness, find where that gen is and use as parent
-        ran_selection = random.uniform(0, total_fitness)
-        current, j = 0, 0
-        while current < ran_selection:
-            current += can_mate[j].fitness
-            j += 1
-        parent1 = can_mate[j-1]
-        # randomize a number between 0-sum of all fitness, find where that gen is and use as parent
-        ran_selection = random.uniform(0, total_fitness)
-        current, j = 0, 0
-        while current < ran_selection:
-            current += can_mate[j].fitness
-            j += 1
-        parent2 = can_mate[j-1]
+    # Tournament selection
+    def selection(self, can_mate):
+        parent1 = self.get_parent(can_mate)
+        parent2 = self.get_parent(can_mate)
         return parent1, parent2
 
     # mutates a gen by replacing it with a random neighbor
@@ -171,18 +178,16 @@ class GeneticAlgorithm:
         self.elitism()
 
         # updates ages of gens
-        for i, age in enumerate(self.ages):
-            self.ages[i] += 1
+        for gen in self.gen_arr:
+            gen.ages += 1
 
         # finds gens that are mature enough to mate
         can_mate = self.can_mate()
 
         # mating parents
-        for i in range(self.elite_size, self.pop_size):
+        while len(self.gen_arr) < 2*self.pop_size:
             p1, p2 = self.selection(can_mate)
-            self.buffer[i] = self.crossover(p1, p2)
-            # zeroing new gens ages
-            self.ages[i] = 0
+            self.gen_arr.append(self.crossover(p1, p2))
 
             # randomly mutates a gen
             if random.random() <= self.mutation_rate:
@@ -193,8 +198,8 @@ class GeneticAlgorithm:
     # chooses the gens that can mate according to age
     def can_mate(self):
         can_mate = []
-        for i, gen in enumerate(self.gen_arr):
-            if self.ages[i] >= 3:
+        for gen in self.gen_arr:
+            if gen.age >= 3:
                 can_mate.append(gen)
         return can_mate
 
