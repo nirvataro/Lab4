@@ -6,6 +6,7 @@ from psutil import cpu_freq
 import copy
 
 
+# SA-search for cluster improvment
 class SimulatedAnnealing:
     def __init__(self, cvrp):
         self.cvrp = cvrp
@@ -45,6 +46,7 @@ class SimulatedAnnealing:
             i += 1
             time_left = end_time - time.time()
 
+    # random neighbor defined by randomly moving a city to different cluster
     def getRandomNeighborhood(self, candidate):
         cand_copy = copy.deepcopy(candidate)
         idx = range(len(cand_copy))
@@ -57,6 +59,7 @@ class SimulatedAnnealing:
             return cand_copy
         return candidate
 
+    # cost defined by sum of distances of cities in cluster to center point of cluster
     def cost(self, clusters):
         value = 0
         for cluster in clusters:

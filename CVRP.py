@@ -2,19 +2,19 @@ from Knapsack import Knapsack, Item
 import LDS_search
 import numpy as np
 from scipy.spatial import distance
-from copy import deepcopy
 from SimulatedAnnealingCVRP import SimulatedAnnealing as SA_cvrp
 from SimulatedAnnealingClusters import SimulatedAnnealing as SA_clusters
-import time
 import random
-import networkx as nx
 import matplotlib.pyplot as plt
 
 
+# class to represent basic CVRP problem
 class CVRP:
     def __init__(self, file=None, capacity=None, dist_matrix=None, goods=None, cords=None):
+        # initialize problem using a file
         if file:
             self.capacity, self.dist_matrix, self.goods, self.city_cords = self.extract(file)
+        # initialize problem with parameters
         else:
             self.capacity = capacity
             self.dist_matrix = dist_matrix
@@ -22,8 +22,10 @@ class CVRP:
             self.city_cords = cords
         self.trucks = []
         self.unvisited_cities = list(range(1, len(self.goods)))
+        # best solution found
         self.cost = 0
 
+    # initalize class using input file
     def extract(self, input_file):
         with open(input_file) as f:
             lines = f.readlines()
@@ -55,6 +57,7 @@ class CVRP:
                 dist_matrix[index_i][index_j] = distance.euclidean(cord_i, cord_j)
         return capacity, dist_matrix, goods, cords
 
+    # given a configuration of clusters and routs create trucks for CVRP
     def by_config(self, config):
         for clus in config:
             self.add_truck()
@@ -63,6 +66,7 @@ class CVRP:
     def add_truck(self):
         self.trucks.append(Truck(self.capacity))
 
+    # create route of truck given a route
     def add_route_to_truck(self, truck, route):
         truck.road = route
         current_city = 1
@@ -101,6 +105,7 @@ class CVRP:
 
         plt.show()
 
+    # generate random clusters for GA
     def generate_clusters(self):
         clusters = []
         unused_cities = self.unvisited_cities.copy()
@@ -108,16 +113,17 @@ class CVRP:
             cluster = []
             cluster_room = self.capacity
             while cluster_room and unused_cities:
-                city = random.choice(unused_cities)
+                city = random.choice(unused_cities)+1
                 if self.goods[city-1] > cluster_room:
                     break
-                unused_cities.remove(city)
+                unused_cities.remove(city-1)
                 cluster.append(city)
                 cluster_room -= self.goods[city-1]
             clusters.append(cluster)
         return clusters
 
 
+# class of trucks - keeps track of trucks route distance traveled and capacity left
 class Truck:
     def __init__(self, capacity):
         self.room = capacity
@@ -125,6 +131,8 @@ class Truck:
         self.cost = 0
 
 
+# class that solves CVRP by 2 steps:
+# clustering cities and after solves TSP for each cluster
 class TwoStepSolution(CVRP):
     def __init__(self, file=None):
         super().__init__(file)
@@ -132,17 +140,22 @@ class TwoStepSolution(CVRP):
         self.sack_center = None
         self.ks = Knapsack(adjustable_values=self.adjust_values)
 
+    # search split into 2 parts of equal time - clustering and TSP for clusters
     def search(self, time=120):
         print("Clustering")
         self.clustering(time/2)
         print("Finding Paths")
         self.TSP(time/2)
 
+    # finds an initial clustering using knapsack, after tries to improve clusters
     def clustering(self, time):
         max_trucks = 1 + sum(self.goods)/self.capacity
         time_for_sack = 0.5 * time / max_trucks
+        # finds best sack possible for all cities where a cities value will be calculated
+        # each iteration by distance to center point of all cities already chosen
         while self.unvisited_cities:
             items = []
+            # make knapsack problem with all cities that haven't been clustered
             for index, city_number in enumerate(self.unvisited_cities):
                 items.append(Item(index, 0.0001, [self.goods[city_number]]))
             self.ks.init_not_from_file(1, [self.capacity], items)
@@ -154,11 +167,14 @@ class TwoStepSolution(CVRP):
             self.unvisited_cities = [item for item in self.unvisited_cities if item not in cluster]
         self.improve_clustering(0.5 * time)
 
+    # tries to improve current clustering using simulated annealing search
+    # trying to minimize sum of distances of point in cluster to center point of cluster
     def improve_clustering(self, timer):
         sa_clusters = SA_clusters(self)
         sa_clusters.sa_search(timer, True)
         self.city_clusters = sa_clusters.saBest.copy()
 
+    # after finding clusters, try to find shortest route for each cluster
     def TSP(self, time):
         large_clusters = sum([1 for cluster in self.city_clusters if len(cluster) > 1])
         for cluster in self.city_clusters:
@@ -166,11 +182,13 @@ class TwoStepSolution(CVRP):
             road = np.array(self.find_TSP(cluster, time/large_clusters) if len(cluster) > 1 else cluster)
             self.add_route_to_truck(self.trucks[-1], road.tolist())
 
+    # to find shortest route used simulated annealing search
     def find_TSP(self, cities, timer):
         sa = SA_cvrp(self, cities)
         sa.sa_search(timer, True)
         return sa.saBest
 
+    # updates values of items for knapsack problem to be distance to center point of current cluster
     def adjust_values(self):
         if not self.ks.items_used:
             return

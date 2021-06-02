@@ -1,6 +1,7 @@
 import numpy as np
 
 
+# represents multi-knapsack problem
 class Knapsack:
     def __init__(self, input_file=None, adjustable_values=None):
         self.m = None   # number of items
@@ -18,12 +19,14 @@ class Knapsack:
             self.adjustable = True
             self.values_function = adjustable_values
 
+    # initializes parameters by values given by user
     def init_not_from_file(self, sack_number, sack_capacities, items):
         self.m = len(items)
         self.n = sack_number
         self.items = items
         self.sacks = [Sack(sack_capacities[i], i) for i in range(sack_number)]
 
+    # initializes parameters by file
     def extract(self, file):
         text = open(file, 'r+')
         text = text.read()
@@ -45,6 +48,7 @@ class Knapsack:
         self.sacks = [Sack(sack_capacities[i], i) for i in range(self.n)]
         self.items = [Item(i, item_values[i], item_weights[i]) for i in range(self.m)]
 
+    # calculates estimate of current setup neglecting the constraint of all items to be 0/1
     def neglecting_integrality_constraints(self, dont_use):
         # calculating object weight per value
         normalized_values = [[None for _ in range(len(self.items))] for _ in range(len(self.sacks))]
@@ -87,12 +91,14 @@ class Knapsack:
                     partial_item = None
         return best_overall, partial_item
 
+    # adds specific item to all the sacks
     def add_item_to_sacks(self, item_index):
         self.items_used.append(item_index)
         for sack in self.sacks:
             sack.add_item(self.items[item_index])
         self.value += self.items[item_index].value
 
+    # removes specific item from all the sacks
     def remove_item_from_sacks(self, item_index):
         self.items_used.remove(item_index)
         for sack in self.sacks:
@@ -106,12 +112,14 @@ class Knapsack:
         self.items_used = []
         self.value = 0
 
+    # checks if all sacks are legal based on room left
     def is_legal(self):
         for sack in self.sacks:
             if sack.room < 0:
                 return False
         return True
 
+    # print method
     def __str__(self):
         string = "Knapsack:\nItems Taken: " + str(self.items_used) + "\nValue: " + str(self.value) + "\nOpt: " + str(self.opt)
         string += "\nRoom left in each sack: \n"
@@ -120,6 +128,7 @@ class Knapsack:
         return string
 
 
+# represents 1 sack in knapsack problem
 class Sack:
     def __init__(self, capacity, number):
         self.number = number
@@ -128,11 +137,13 @@ class Sack:
         self.items = []
         self.value = 0
 
+    # add an item to the sack
     def add_item(self, item):
         self.items.append(item.copy())
         self.value += item.value
         self.room -= item.weights[self.number]
 
+    # removes an item from sack
     def remove_item(self, item_number):
         for item in self.items:
             if item.number == item_number:
@@ -140,10 +151,12 @@ class Sack:
                 self.room += item.weights[self.number]
         self.items = list(filter(lambda x: x.number != item_number, self.items))
 
+    # print method
     def __str__(self):
         return "Sack {}: {}\n".format(self.number, self.room)
 
 
+# represents item in knapsack problem
 class Item:
     def __init__(self, number, value, weights):
         self.number = number

@@ -8,7 +8,7 @@ def main_cvrp(file):
     cvrp1 = CVRP(file)
     cvrp2 = CVRP(file)
     ga = GA(cvrp1)
-    ga.genetic(500)
+    ga.genetic(180)
     best_clusters = min(ga.gen_arr, key=lambda x: x.cluster_val)
     best_TSP = min(ga.gen_arr, key=lambda x: x.distance_val)
     cvrp1.by_config(best_clusters.city_clusters)

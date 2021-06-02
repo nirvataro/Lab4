@@ -13,6 +13,7 @@ GA_MUTATIONRATE = .25      # mutation rate
 ########################################
 
 
+# gen of CVRP, having its own configuration, cluster value and TSP value
 class Gen:
     def __init__(self, city_clusters, distance_matrix, city_cords, age=0):
         self.city_clusters = [clus for clus in city_clusters if clus != []]
@@ -23,6 +24,7 @@ class Gen:
         self.crowd_distance = 0
         self.age = age
 
+    # calculates gen's cluster and TSP values
     def calc_val(self, distance_matrix, city_cords):
         distance_sum = 0
         cluster_val = 0
@@ -34,18 +36,20 @@ class Gen:
                 y += city_cords[city - 1][1]
                 distance_sum += distance_matrix[last_city-1][city-1]
                 last_city = city
-            distance_sum += distance_matrix[last_city][1]
+            distance_sum += distance_matrix[last_city-1][0]
             center = (x/len(cluster), y/len(cluster))
             for city in cluster:
                 cluster_val += distance.euclidean(center, city_cords[city-1])
         return cluster_val*len(self.city_clusters), distance_sum
 
+    # print method
     def __str__(self):
         string = "CVRP Gen:\n" + "Config: " + str(self.city_clusters) + "\nClusters Value: "
         string += str(self.cluster_val) + "\nTotal Distance: " + str(self.distance_val)
         return string
 
 
+# Genetic Algorithm class
 class GeneticAlgorithm:
     def __init__(self, cvrp, popsize=GA_POPSIZE, mutation_rate=GA_MUTATIONRATE):
         # uncolored graph of the graph we are trying to color
@@ -57,8 +61,6 @@ class GeneticAlgorithm:
         # arrays of current and next generation
         self.gen_arr = self.init_population()
         self.fronts = []
-        # best fitness
-        self.best_fitness = 0
         # iteration count
         self.iterations = 0
 
@@ -67,7 +69,6 @@ class GeneticAlgorithm:
         output = str(self.gen_arr[0])
         output += "\nAvg fitness of gen: {}".format(self.avg_fit())
         output += "\nFitness STD: {}".format(self.std_fit())
-
         return output
 
     # initializes population
@@ -75,7 +76,7 @@ class GeneticAlgorithm:
         gen_arr = [Gen(self.cvrp.generate_clusters(), self.cvrp.dist_matrix, self.cvrp.city_cords, random.randint(0, 4)) for _ in range(self.pop_size)]
         return gen_arr
 
-    # sorts population by key fitness value
+    # sorts population by fronts and crowding distance
     def sort_by_fitness(self, timer):
         self.calculate_fronts()
         self.crowding_distance_sort()
@@ -84,11 +85,14 @@ class GeneticAlgorithm:
         print("Total time of generation: {}".format(iter_time))
         print("Total clock ticks (CPU)) of generation: {}\n".format(iter_time * cpu_freq()[0] * (2 ** 20)))
 
+    # calculates each gens front for NSGA-2
     def calculate_fronts(self):
+        # reset from last generation
         for gen in self.gen_arr:
             gen.front = None
             gen.dominating = []
             gen.domination_count = 0
+        # finding domination of gens on other gens
         for i, gen1 in enumerate(self.gen_arr):
             for gen2 in self.gen_arr[i+1:]:
                 if gen1.cluster_val <= gen2.cluster_val and gen1.distance_val <= gen2.distance_val:
@@ -99,6 +103,7 @@ class GeneticAlgorithm:
                     if gen2.cluster_val < gen1.cluster_val or gen2.distance_val < gen1.distance_val:
                         gen2.dominating.append(gen1)
                         gen1.domination_count += 1
+        # setting fronts of gens based on dominations
         front_count = 1
         unsorted_gens = len(self.gen_arr)
         while unsorted_gens:
@@ -115,8 +120,10 @@ class GeneticAlgorithm:
             front_count += 1
             self.fronts.append(front)
 
+    # calculating and sorting by crowding distance
     def crowding_distance_sort(self):
         for front in self.fronts:
+            # calculting by cluster axis
             front.sort(key=lambda x: x.cluster_val)
             front[0].crowd_distance = np.inf
             front[-1].crowd_distance = np.inf
@@ -124,6 +131,7 @@ class GeneticAlgorithm:
                 if front[0].cluster_val-front[-1].cluster_val:
                     gen.crowd_distance += (front[i+1].cluster_val-front[i-1].cluster_val)/\
                                       (front[0].cluster_val-front[-1].cluster_val)
+            # calculting by TSP axis
             front.sort(key=lambda x: x.distance_val)
             front[0].crowd_distance = np.inf
             front[-1].crowd_distance = np.inf
@@ -132,6 +140,7 @@ class GeneticAlgorithm:
                     gen.crowd_distance += (front[i+1].distance_val-front[i-1].distance_val)/\
                                       (front[0].distance_val-front[-1].distance_val)
 
+    # sorting next generation by fronts and crowding distance
     def elitism(self):
         self.gen_arr.clear()
         while self.pop_size - len(self.gen_arr):
@@ -142,12 +151,13 @@ class GeneticAlgorithm:
                 self.gen_arr.append(gen)
         self.fronts = []
 
-    # crossover method - if one of the parents is legal pass their color to child
-    # otherwise, randomly choose a color between them
+    # crossover method - choose randomly between each cluster of parents
+    # if city already taken remove it from cluster
+    # all cities that are not in new config add to cluster which shares most cities in parents clusters
     def crossover(self, gen1, gen2):
         new_gen_clusters = []
         new_gen_room = []
-        unchosen_cities = list(range(2, len(self.cvrp.goods)))
+        unchosen_cities = list(range(2, len(self.cvrp.goods)+1))
         clusters_number = max(len(gen1.city_clusters), len(gen2.city_clusters))
         for i in range(clusters_number):
             choose_cluster = random.randint(0, 1)
@@ -192,13 +202,7 @@ class GeneticAlgorithm:
                 new_gen_room.append(self.cvrp.capacity - self.cvrp.goods[city-1])
         return Gen(new_gen_clusters, self.cvrp.dist_matrix, self.cvrp.city_cords)
 
-    # checks if a node has a neighbor of same color
-    def is_violating(self, node):
-        for neighbor in node.neighbors:
-            if node.color == neighbor.color:
-                return True
-        return False
-
+    # gets 1 parent by tournament
     def get_parent(self, can_mate):
         g1, g2 = random.sample(can_mate, 2)
         if g1.front > g2.front:
@@ -215,11 +219,14 @@ class GeneticAlgorithm:
         parent2 = self.get_parent(can_mate)
         return parent1, parent2
 
-    # mutates a gen by replacing it with a random neighbor
+    # mutation is a random switch of 2 cities in a cluster
     def mutate(self, gen):
         clusters_copy = copy.deepcopy(gen.city_clusters)
         route = random.choice(clusters_copy)
-        random.shuffle(route)
+        if len(route) > 2:
+            idx = range(len(route))
+            i1, i2 = random.sample(idx, 2)
+            route[i1], route[i2] = route[i2], route[i1]
         return Gen(clusters_copy, self.cvrp.dist_matrix, self.cvrp.city_cords)
 
     # creates a new generation from the previous one
@@ -252,12 +259,14 @@ class GeneticAlgorithm:
         return can_mate
 
     def avg_fit(self):
-        fit_arr = [g.distance_val for g in self.gen_arr]
-        return np.mean(fit_arr)
+        cluster_arr = [g.cluster_val for g in self.gen_arr]
+        distance_arr = [g.distance_val for g in self.gen_arr]
+        return np.mean(cluster_arr), np.mean(distance_arr)
 
     def std_fit(self):
-        fit_arr = [g.distance_val for g in self.gen_arr]
-        return np.std(fit_arr)
+        cluster_arr = [g.cluster_val for g in self.gen_arr]
+        distance_arr = [g.distance_val for g in self.gen_arr]
+        return np.std(cluster_arr), np.std(distance_arr)
 
     # main loop of search
     def genetic(self, search_time=120):

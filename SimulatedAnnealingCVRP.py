@@ -4,6 +4,7 @@ import time
 from psutil import cpu_freq
 
 
+# Basic TSP SA-search
 class SimulatedAnnealing:
     def __init__(self, cvrp, cluster):
         self.cities = cluster.copy()
@@ -44,6 +45,7 @@ class SimulatedAnnealing:
             i += 1
             time_left = end_time - time.time()
 
+    # neighbor is a random switch between 2 cities
     def getRandomNeighborhood(self, candidate):
         neighbor = candidate.copy()
         idx = range(len(candidate))
@@ -51,6 +53,7 @@ class SimulatedAnnealing:
         neighbor[i1], neighbor[i2] = neighbor[i2], neighbor[i1]
         return neighbor
 
+    # start route will sb by 3NN heuristic
     def generate_start_permutation_3NN(self):
         permutation = []
         unvisited_cities = self.cities.copy()
@@ -76,6 +79,7 @@ class SimulatedAnnealing:
             unvisited_cities.remove(city)
         return np.array(permutation)
 
+    # cost function is length of route
     def cost(self, config):
         current_city = 1
         cost = 0
@@ -86,6 +90,7 @@ class SimulatedAnnealing:
             current_city = config_copy.pop(0)
         return cost + self.dist_matrix[current_city-1][0]
 
+    # print method
     def __str__(self):
         string = "Simulated Annealing:\nThe Best Route Found: \n"
         return string + str(self.saBest)

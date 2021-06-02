@@ -1,7 +1,7 @@
-import numpy as np
 import time
 
 
+# searches using LDS technique as learned in lecture
 class LDS:
     def __init__(self, knapsack_problem):
         self.knapsack = knapsack_problem
@@ -12,6 +12,8 @@ class LDS:
         self.errors = 0
         self.heuristics = {0: self.fractional_search, 1: self.unlimited_sack_search}
 
+    # search function by waves of errors using heuristics:
+    # 0-integer neglecting / 1-neglecting sack capacity
     def search(self, heuristic, time_limit=120):
         end_time = time.time() + time_limit
         for wave in range(self.knapsack.m):
@@ -23,6 +25,7 @@ class LDS:
         for item in self.best_items_used:
             self.knapsack.add_item_to_sacks(item)
 
+    # search using heuristic neglecting integer constraint to achieve upper bound
     def fractional_search(self, wave, end_time, dont_use=None):
         if time.time() >= end_time:
             return
@@ -41,6 +44,7 @@ class LDS:
         if partial_item is None:
             return
 
+        # recursive section by number of errors remaining in relativity to heuristic
         if wave > 0:
             items_taken = self.knapsack.items_used.copy()
             items_taken.append(partial_item)
@@ -73,6 +77,7 @@ class LDS:
             if self.knapsack.value > self.best_found and self.knapsack.is_legal():
                 self.best_found = self.knapsack.value
                 self.best_items_used = self.knapsack.items_used.copy()
+        # recursive section by number of errors remaining in relativity to heuristic
         if wave > 0:
             used_items = self.knapsack.items_used.copy()
             config = self.knapsack.items_used.copy()
