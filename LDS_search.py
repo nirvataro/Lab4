@@ -3,7 +3,8 @@ import time
 
 # searches using LDS technique as learned in lecture
 class LDS:
-    def __init__(self, knapsack_problem):
+    def __init__(self, knapsack_problem, output=False):
+        self.output = output
         self.knapsack = knapsack_problem
         self.best_found = 0
         self.best_used = None
@@ -40,7 +41,8 @@ class LDS:
         if self.knapsack.value > self.best_found:
             self.best_found = self.knapsack.value
             self.best_items_used = self.knapsack.items_used.copy()
-            print(self.knapsack)
+            if self.output:
+                print(self.knapsack)
         if partial_item is None:
             return
 

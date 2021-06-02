@@ -51,7 +51,8 @@ class Gen:
 
 # Genetic Algorithm class
 class GeneticAlgorithm:
-    def __init__(self, cvrp, popsize=GA_POPSIZE, mutation_rate=GA_MUTATIONRATE):
+    def __init__(self, cvrp, popsize=GA_POPSIZE, mutation_rate=GA_MUTATIONRATE, output=False):
+        self.output = output
         # uncolored graph of the graph we are trying to color
         self.cvrp = cvrp
         # size of population
@@ -80,10 +81,11 @@ class GeneticAlgorithm:
     def sort_by_fitness(self, timer):
         self.calculate_fronts()
         self.crowding_distance_sort()
-        print(self)
-        iter_time = time.time() - timer
-        print("Total time of generation: {}".format(iter_time))
-        print("Total clock ticks (CPU)) of generation: {}\n".format(iter_time * cpu_freq()[0] * (2 ** 20)))
+        if self.output:
+            print(self)
+            iter_time = time.time() - timer
+            print("Total time of generation: {}".format(iter_time))
+            print("Total clock ticks (CPU)) of generation: {}\n".format(iter_time * cpu_freq()[0] * (2 ** 20)))
 
     # calculates each gens front for NSGA-2
     def calculate_fronts(self):
@@ -283,5 +285,6 @@ class GeneticAlgorithm:
             self.iterations += 1
 
         total_time = time.time() - total_timer
-        print("Total time : {}\nTotal clock ticks : {}\nTotal iterations:{}".format(total_time, total_time * cpu_freq()[
-            0] * 2 ** 20, self.iterations + 1))
+        if self.output:
+            print("Total time : {}\nTotal clock ticks : {}\nTotal iterations:{}".format(total_time, total_time * cpu_freq()[
+                0] * 2 ** 20, self.iterations + 1))

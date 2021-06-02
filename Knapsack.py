@@ -12,6 +12,7 @@ class Knapsack:
         self.value = 0
         self.opt = None
         self.from_file = False
+        self.adjustable = False
         if input_file:
             self.from_file = True
             self.extract(input_file)
