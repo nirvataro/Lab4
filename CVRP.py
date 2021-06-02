@@ -145,10 +145,10 @@ class TwoStepSolution(CVRP):
     def search(self, time=120):
         if self.output:
             print("Clustering...")
-        self.clustering(time/2)
+        self.clustering(time*0.75)
         if self.output:
             print("Finding Paths...")
-        self.TSP(time/2)
+        self.TSP(time*0.25)
 
     # finds an initial clustering using knapsack, after tries to improve clusters
     def clustering(self, time):
