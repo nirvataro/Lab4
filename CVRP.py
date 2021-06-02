@@ -55,6 +55,11 @@ class CVRP:
                 dist_matrix[index_i][index_j] = distance.euclidean(cord_i, cord_j)
         return capacity, dist_matrix, goods, cords
 
+    def by_config(self, config):
+        for clus in config:
+            self.add_truck()
+            self.add_route_to_truck(self.trucks[-1], clus)
+
     def add_truck(self):
         self.trucks.append(Truck(self.capacity))
 
@@ -69,6 +74,15 @@ class CVRP:
             current_city = route_copy.pop(0)
         truck.cost += self.dist_matrix[current_city-1][0]
         self.cost += truck.cost
+
+    def legal(self, clusters):
+        for cluster in clusters:
+            room = self.capacity
+            for c in cluster:
+                room -= self.goods[c-1]
+            if room < 0:
+                return False
+        return True
 
     def draw(self):
         node_color = "#" + ''.join([random.choice('0123456789ABCDEF') for _ in range(6)])
@@ -93,7 +107,7 @@ class CVRP:
         while unused_cities:
             cluster = []
             cluster_room = self.capacity
-            while cluster_room:
+            while cluster_room and unused_cities:
                 city = random.choice(unused_cities)
                 if self.goods[city-1] > cluster_room:
                     break
@@ -144,15 +158,6 @@ class TwoStepSolution(CVRP):
         sa_clusters = SA_clusters(self)
         sa_clusters.sa_search(timer, True)
         self.city_clusters = sa_clusters.saBest.copy()
-
-    def legal(self, clusters):
-        for cluster in clusters:
-            room = self.capacity
-            for c in cluster:
-                room -= self.goods[c-1]
-            if room < 0:
-                return False
-        return True
 
     def TSP(self, time):
         large_clusters = sum([1 for cluster in self.city_clusters if len(cluster) > 1])

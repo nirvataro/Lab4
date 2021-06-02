@@ -1,12 +1,22 @@
 from sys import argv
 from CVRP import TwoStepSolution
+from CVRP import CVRP
+from GeneticAlgorithm import GeneticAlgorithm as GA
 
 
 def main_cvrp(file):
-    tss = TwoStepSolution(file)
-    tss.search(120)
-    print(tss.cost)
-    tss.draw()
+    cvrp1 = CVRP(file)
+    cvrp2 = CVRP(file)
+    ga = GA(cvrp1)
+    ga.genetic(500)
+    best_clusters = min(ga.gen_arr, key=lambda x: x.cluster_val)
+    best_TSP = min(ga.gen_arr, key=lambda x: x.distance_val)
+    cvrp1.by_config(best_clusters.city_clusters)
+    print(cvrp1.cost)
+    cvrp1.draw()
+    cvrp2.by_config(best_TSP.city_clusters)
+    print(cvrp2.cost)
+    cvrp2.draw()
 
 
 if __name__ == '__main__':
