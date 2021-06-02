@@ -1,5 +1,4 @@
 from sys import argv
-from CVRP import TwoStepSolution
 from CVRP import CVRP
 from GeneticAlgorithm import GeneticAlgorithm as GA
 

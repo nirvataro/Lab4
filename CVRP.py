@@ -134,17 +134,20 @@ class Truck:
 # class that solves CVRP by 2 steps:
 # clustering cities and after solves TSP for each cluster
 class TwoStepSolution(CVRP):
-    def __init__(self, file=None):
+    def __init__(self, file=None, output=False):
         super().__init__(file)
+        self.output = output
         self.city_clusters = []
         self.sack_center = None
         self.ks = Knapsack(adjustable_values=self.adjust_values)
 
     # search split into 2 parts of equal time - clustering and TSP for clusters
     def search(self, time=120):
-        print("Clustering")
+        if self.output:
+            print("Clustering...")
         self.clustering(time/2)
-        print("Finding Paths")
+        if self.output:
+            print("Finding Paths...")
         self.TSP(time/2)
 
     # finds an initial clustering using knapsack, after tries to improve clusters
@@ -170,8 +173,10 @@ class TwoStepSolution(CVRP):
     # tries to improve current clustering using simulated annealing search
     # trying to minimize sum of distances of point in cluster to center point of cluster
     def improve_clustering(self, timer):
+        if self.output:
+            print("Improving Clusters...")
         sa_clusters = SA_clusters(self)
-        sa_clusters.sa_search(timer, True)
+        sa_clusters.sa_search(timer, self.output)
         self.city_clusters = sa_clusters.saBest.copy()
 
     # after finding clusters, try to find shortest route for each cluster
@@ -185,7 +190,7 @@ class TwoStepSolution(CVRP):
     # to find shortest route used simulated annealing search
     def find_TSP(self, cities, timer):
         sa = SA_cvrp(self, cities)
-        sa.sa_search(timer, True)
+        sa.sa_search(timer, self.output)
         return sa.saBest
 
     # updates values of items for knapsack problem to be distance to center point of current cluster
@@ -201,3 +206,9 @@ class TwoStepSolution(CVRP):
             if item.number not in self.ks.items_used:
                 distance = np.linalg.norm(self.sack_center-self.city_cords[item.number])
                 item.value = 1 / (distance + 0.0001)
+
+    def __str__(self):
+        string = "Two Step Solution:\nBest Found: " + str(self.cost) + "\nTrucks Routes:"
+        for i, truck in enumerate(self.trucks, start=1):
+            string += "\nTruck " + str(i) +": " + str(truck.road) + "\tCost: " + str(truck.cost)
+        return string
