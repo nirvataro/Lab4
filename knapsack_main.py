@@ -6,7 +6,7 @@ from LDS_search import LDS
 def main_knapsack(file):
     ks = Knapsack(file)
     lds = LDS(ks)
-    lds.search(0, 120)
+    lds.search(1, 120)
     print(ks)
 
 

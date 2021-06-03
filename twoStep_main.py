@@ -4,7 +4,7 @@ from CVRP import TwoStepSolution as TSS
 
 def main_cvrp(file):
     two_step_solution = TSS(file, output=True)
-    two_step_solution.search()
+    two_step_solution.search(180)
     print(two_step_solution)
     two_step_solution.draw()
 
